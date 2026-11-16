@@ -7,17 +7,17 @@ import java.util.Scanner;
 
 public class Menu {
 
-    public static final Integer ADD_POST = 1;
-    public static final Integer ADD_MANY_POST = 2;
-    public static final Integer SHOW_ALL_POSTS = 3;
-    public static final Integer DELETE_POST = 4;
+    private static final int ADD_POST = 1;
+    private static final int ADD_MANY_POST = 2;
+    private static final int SHOW_ALL_POSTS = 3;
+    private static final int DELETE_POST = 4;
 
-    public static final String SELECT = "Выберите меню";
-    public static final String COUNT = "Выберите количество создаваемых постов";
-    public static final String TEXT_OF_POST = "Введите текст";
-    public static final String EXIT = "Конец работы";
+    private static final String SELECT = "Выберите меню";
+    private static final String COUNT = "Выберите количество создаваемых постов";
+    private static final String TEXT_OF_POST = "Введите текст";
+    private static final String EXIT = "Конец работы";
 
-    public static final String MENU = """
+    private static final String MENU = """
                 Введите 1 для создание поста.
                 Введите 2, чтобы создать определенное количество постов.
                 Введите 3, чтобы показать все посты.
@@ -31,11 +31,13 @@ public class Menu {
         CommentGenerator commentGenerator = new CommentGenerator(random, userGenerator);
         Scanner scanner = new Scanner(System.in);
         PostStore postStore = new PostStore();
-        start(commentGenerator, scanner, userGenerator, postStore);
+        Menu menu = new Menu();
+        menu.start(commentGenerator, scanner, userGenerator, postStore);
     }
 
-    private static void start(CommentGenerator commentGenerator, Scanner scanner, UserGenerator userGenerator, PostStore postStore) {
+    private void start(CommentGenerator commentGenerator, Scanner scanner, UserGenerator userGenerator, PostStore postStore) {
         boolean run = true;
+        userGenerator.generate();
         while (run) {
             System.out.println(MENU);
             System.out.println(SELECT);
@@ -44,29 +46,24 @@ public class Menu {
             if (ADD_POST == userChoice) {
                 System.out.println(TEXT_OF_POST);
                 String text = scanner.nextLine();
-                userGenerator.generate();
-                commentGenerator.generate();
-                var post = new Post();
-                post.setText(text);
-                post.setComments(CommentGenerator.getComments());
-                var saved = postStore.add(post);
-                System.out.println("Generate: " + saved.getId());
+                Post post = createPost(commentGenerator, postStore, text);
+                System.out.println("Generate: " + post.getId());
             } else if (ADD_MANY_POST == userChoice) {
                 System.out.println(TEXT_OF_POST);
                 String text = scanner.nextLine();
                 System.out.println(COUNT);
                 String count = scanner.nextLine();
-                memUsage();
-                for (int i = 0; i < Integer.parseInt(count); i++) {
+                System.out.printf("Память до создания: %.2f Mb%n", memUsage());
+                int total = Integer.parseInt(count);
+                for (int i = 0; i < total; i++) {
                     System.out.printf("\rGenerate %.2f%% %.2fMb",
-                            ((double) i / Integer.parseInt(count)) * 100,
-                            memUsage());
-                    createPost(commentGenerator, userGenerator, postStore, text);
+                            ((double) i / total) * 100, memUsage());
+                    createPost(commentGenerator, postStore, text);
                 }
                 System.out.println();
-                memUsage();
+                System.out.printf("Память после создания: %.2f Mb%n", memUsage());
             } else if (SHOW_ALL_POSTS == userChoice) {
-                System.out.println(PostStore.getPosts());
+                System.out.println(postStore.getPosts());
             } else if (DELETE_POST == userChoice) {
                 System.out.println("Удаление всех постов ...");
                 postStore.removeAll();
@@ -77,7 +74,7 @@ public class Menu {
         }
     }
 
-    private static double memUsage() {
+    private double memUsage() {
         var rt = Runtime.getRuntime();
         var totalMem = rt.totalMemory();
         var freeMem = rt.freeMemory();
@@ -85,14 +82,13 @@ public class Menu {
         return (double) usedMem / 1024 / 1024;
     }
 
-    private static void createPost(CommentGenerator commentGenerator,
-                                   UserGenerator userGenerator,
+    private Post createPost(CommentGenerator commentGenerator,
                                    PostStore postStore, String text) {
-        userGenerator.generate();
         commentGenerator.generate();
         var post = new Post();
         post.setText(text);
-        post.setComments(CommentGenerator.getComments());
+        post.setComments(commentGenerator.getComments());
         postStore.add(post);
+        return post;
     }
 }
